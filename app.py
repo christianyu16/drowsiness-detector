@@ -7,7 +7,7 @@ from ultralytics import YOLO
 # Load model
 @st.cache_resource
 def load_model():
-    return YOLO("Yolov11best.pt") 
+    return YOLO("Yolov11best.pt")  
 
 model = load_model()
 
@@ -54,4 +54,4 @@ if uploaded_video is not None:
     out.release()
 
     st.success("Video processing complete!")
-    st.video(output_path)  
+    st.video(output_path)
