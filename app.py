@@ -4,10 +4,10 @@ import tempfile
 import os
 from ultralytics import YOLO
 
-# Load model
+# Cache model for performance
 @st.cache_resource
 def load_model():
-    return YOLO("Yolov11best.pt")  
+    return YOLO("Yolov11best.pt")  # Ensure this file exists in the same directory or use full path
 
 model = load_model()
 
@@ -17,41 +17,44 @@ uploaded_video = st.file_uploader("Upload a video", type=["mp4", "avi", "mov"])
 class_names = {0: "Awake", 1: "Drowsy"}
 
 if uploaded_video is not None:
-    # Save uploaded file to a temporary location
+    # Save the uploaded file temporarily
     tfile = tempfile.NamedTemporaryFile(delete=False, suffix='.mp4')
     tfile.write(uploaded_video.read())
     tfile.close()
     video_path = tfile.name
 
-    # Show original video
     st.video(video_path)
-    st.info("Processing video...")
+    st.info("Running detection on video (this may take a while)...")
 
-    # Load video and get properties
+    # Load video
     cap = cv2.VideoCapture(video_path)
     fps = cap.get(cv2.CAP_PROP_FPS)
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-    # Prepare output video path
-    output_path = os.path.join(tempfile.gettempdir(), "output_drowsy.mp4")
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    # Create output video file
+    output_path = os.path.join(tempfile.gettempdir(), "processed_output.mp4")
+    fourcc = cv2.VideoWriter_fourcc(*'avc1')  
     out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
 
-    # Process each frame
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret:
             break
 
-        # Inference
+        # Run YOLO
         results = model.predict(frame, conf=0.3, verbose=False)
         result_frame = results[0].plot()
 
+        # Write processed frame
         out.write(result_frame)
 
     cap.release()
     out.release()
 
     st.success("Video processing complete!")
-    st.video(output_path)
+
+    # Display processed video
+    with open(output_path, 'rb') as processed_file:
+        video_bytes = processed_file.read()
+        st.video(video_bytes)
